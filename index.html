@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>我喜欢你 · 星空</title>
+    <style>
+        /* 全局重置，全屏无滚动 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            height: 100vh;
+            background: #0a0618;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            background: transparent;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        (function() {
+            // ============================================================
+            //  1. Canvas 初始化 & 尺寸管理
+            // ============================================================
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+
+            let W, H;
+
+            function resize() {
+                W = canvas.width = window.innerWidth;
+                H = canvas.height = window.innerHeight;
+                draw(); // 尺寸变化时重绘
+            }
+
+            window.addEventListener('resize', resize);
+
+            // ============================================================
+            //  2. 星空绘制 (静态，无闪烁)
+            // ============================================================
+            function drawStars() {
+                // 星星数量根据屏幕大小动态调整
+                const count = Math.floor((W * H) / 8000) + 80;
+                // 使用固定种子让星星位置稳定
+                let seed = 42;
+                function seededRandom() {
+                    seed = (seed * 9301 + 49297) % 233280;
+                    return seed / 233280;
+                }
+
+                for (let i = 0; i < count; i++) {
+                    const x = seededRandom() * W;
+                    const y = seededRandom() * H;
+                    const radius = 0.6 + seededRandom() * 2.2;
+                    const alpha = 0.3 + seededRandom() * 0.7;
+
+                    // 星星颜色微偏暖白或冷白
+                    const warmth = seededRandom();
+                    const r = 200 + 55 * warmth;
+                    const g = 200 + 55 * (1 - warmth * 0.6);
+                    const b = 220 + 35 * (1 - warmth);
+
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                    ctx.fill();
+
+                    // 大星星加一点光晕 (极淡)
+                    if (radius > 1.8) {
+                        ctx.shadowColor = `rgba(255, 240, 255, ${alpha * 0.12})`;
+                        ctx.shadowBlur = 15;
+                        ctx.beginPath();
+                        ctx.arc(x, y, radius * 2.5, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(255, 240, 255, ${alpha * 0.04})`;
+                        ctx.fill();
+                        ctx.shadowBlur = 0;
+                    }
+                }
+
+                // 银河带 (淡淡的星云效果，无闪烁)
+                const grad = ctx.createRadialGradient(W * 0.5, H * 0.4, 0, W * 0.5, H * 0.4, Math.max(W, H) * 0.7);
+                grad.addColorStop(0, 'rgba(180, 140, 255, 0.030)');
+                grad.addColorStop(0.4, 'rgba(120, 80, 200, 0.020)');
+                grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, W, H);
+            }
+
+            // ============================================================
+            //  3. 绘制文字 (白色，艺术字风格，静态)
+            // ============================================================
+            function drawText(text, x, y, fontSize) {
+                ctx.save();
+
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.font = `bold ${fontSize}px "Georgia", "Times New Roman", "Palatino Linotype", serif`;
+
+                // 底层阴影 (深色，增强立体感)
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+                ctx.shadowBlur = 25;
+                ctx.shadowOffsetX = 3;
+                ctx.shadowOffsetY = 5;
+                ctx.fillStyle = 'rgba(10, 6, 24, 0.5)';
+                ctx.fillText(text, x + 3, y + 5);
+
+                // 主文字 (纯白)
+                ctx.shadowColor = 'rgba(200, 220, 255, 0.20)';
+                ctx.shadowBlur = 35;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+                ctx.fillStyle = '#f5f0ff';
+                ctx.fillText(text, x, y);
+
+                // 高光层 (极淡，增加质感)
+                ctx.shadowColor = 'rgba(255, 255, 255, 0.08)';
+                ctx.shadowBlur = 40;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.10)';
+                ctx.fillText(text, x - 1, y - 1);
+
+                // 边缘描边 (轻微，让文字更清晰)
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+                ctx.lineWidth = 1.2;
+                ctx.strokeText(text, x, y);
+
+                ctx.restore();
+            }
+
+            // ============================================================
+            //  4. 主绘制函数
+            // ============================================================
+            function draw() {
+                // 清空画布
+                ctx.clearRect(0, 0, W, H);
+
+                // ---- 背景 ----
+                const bgGrad = ctx.createRadialGradient(W * 0.5, H * 0.4, 0, W * 0.5, H * 0.4, Math.max(W, H) * 0.9);
+                bgGrad.addColorStop(0, '#1a1035');
+                bgGrad.addColorStop(0.5, '#0f0a22');
+                bgGrad.addColorStop(1, '#05030d');
+                ctx.fillStyle = bgGrad;
+                ctx.fillRect(0, 0, W, H);
+
+                // ---- 星空 ----
+                drawStars();
+
+                // ---- 计算文字尺寸和位置 ----
+                const textStr = '我喜欢你';
+                const baseSize = Math.min(W, H) * 0.12;
+                const fontSize = Math.max(48, Math.min(baseSize, 110));
+
+                const textX = W / 2;
+                const textY = H / 2;
+
+                // ---- 绘制文字 ----
+                drawText(textStr, textX, textY, fontSize);
+
+                // ---- 在文字周围添加极淡的静态光晕 (非闪烁) ----
+                ctx.save();
+                const glowGrad = ctx.createRadialGradient(textX, textY, 0, textX, textY, Math.max(W, H) * 0.3);
+                glowGrad.addColorStop(0, 'rgba(200, 180, 255, 0.04)');
+                glowGrad.addColorStop(0.6, 'rgba(150, 120, 220, 0.02)');
+                glowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = glowGrad;
+                ctx.fillRect(0, 0, W, H);
+                ctx.restore();
+
+                // ---- 底部极简署名 (可选) ----
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.font = '12px "Georgia", serif';
+                ctx.fillStyle = 'rgba(200, 200, 220, 0.06)';
+                ctx.fillText('· 星辰 ·', W / 2, H - 20);
+                ctx.restore();
+            }
+
+            // ============================================================
+            //  5. 启动
+            // ============================================================
+            resize();
+
+            // 窗口变化时重绘 (已通过resize触发)
+        })();
+    </script>
+</body>
+</html>
